@@ -1,0 +1,721 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Карта CLM-решений</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700&family=Golos+Text:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600&display=swap">
+<style>
+/* Layout: шапка → фильтр этапов → карта (SVG-дерево + панель карточки) → слои рынка → таблица сравнения → выбор по типу компании → чек-лист демо → источники */
+:root {
+  --paper: #F2F4F8;
+  --surface: #FFFFFF;
+  --ink: #161D2E;
+  --muted: #586179;
+  --line: #CDD4E0;
+  --faint: #E4E8F0;
+  --accent: #2743C4;
+  --seg-a: #7A3DB5;   /* конструкторы и ИИ */
+  --seg-b: #2743C4;   /* CLM-платформы */
+  --seg-c: #0D7A73;   /* договоры в СЭД / low-code */
+  --seg-d: #A85C0C;   /* ЭДО и подпись */
+  --warn: #B3261E;
+  --f-display: "Unbounded", "Golos Text", system-ui, sans-serif;
+  --f-body: "Golos Text", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --paper: #0D121C; --surface: #151C2A; --ink: #E5E9F2; --muted: #9AA3B8;
+    --line: #2E3850; --faint: #1E2738; --accent: #8EA2FF;
+    --seg-a: #C39BF0; --seg-b: #8EA2FF; --seg-c: #4FCBBF; --seg-d: #F0A95A; --warn: #FF8A80;
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --paper: #0D121C; --surface: #151C2A; --ink: #E5E9F2; --muted: #9AA3B8;
+  --line: #2E3850; --faint: #1E2738; --accent: #8EA2FF;
+  --seg-a: #C39BF0; --seg-b: #8EA2FF; --seg-c: #4FCBBF; --seg-d: #F0A95A; --warn: #FF8A80;
+  color-scheme: dark;
+}
+
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body {
+  margin: 0; background: var(--paper); color: var(--ink);
+  font: 15px/1.55 var(--f-body);
+}
+.wrap { max-width: 1320px; margin: 0 auto; padding-inline: clamp(16px, 3vw, 36px); padding-block: 28px 64px; display: grid; gap: 44px; }
+h1, h2, h3 { text-wrap: balance; margin: 0; }
+h1 { font: 700 clamp(26px, 4.2vw, 46px)/1.08 var(--f-display); letter-spacing: -0.01em; }
+h2 { font: 700 clamp(19px, 2.2vw, 24px)/1.2 var(--f-display); }
+h3 { font: 600 17px/1.3 var(--f-body); }
+p { margin: 0; max-width: 68ch; }
+.eyebrow { font: 600 11.5px/1 var(--f-mono); text-transform: uppercase; letter-spacing: .12em; color: var(--muted); }
+.mono { font-family: var(--f-mono); font-variant-numeric: tabular-nums; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+/* header */
+header { display: grid; gap: 14px; }
+.lede { color: var(--muted); font-size: 16.5px; }
+.meta { display: flex; flex-wrap: wrap; gap: 8px 18px; color: var(--muted); font-size: 13px; }
+.meta b { color: var(--ink); font-weight: 600; }
+
+/* stage filter */
+.stagebar { display: grid; gap: 10px; }
+.stages { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.stage-btn {
+  font: 500 13.5px/1 var(--f-body); color: var(--ink); background: var(--surface);
+  border: 1px solid var(--line); border-radius: 999px; padding: 9px 14px 9px 10px; cursor: pointer;
+  display: inline-flex; align-items: center; gap: 8px;
+}
+.stage-btn .n { font: 600 11px/1 var(--f-mono); color: var(--muted); border: 1px solid var(--line); border-radius: 50%; width: 20px; height: 20px; display: grid; place-items: center; }
+.stage-btn[aria-pressed="true"] { background: var(--ink); color: var(--paper); border-color: var(--ink); }
+.stage-btn[aria-pressed="true"] .n { color: var(--paper); border-color: var(--paper); }
+.stage-btn:hover { border-color: var(--ink); }
+.arrow { color: var(--line); font-size: 13px; }
+.hint { font-size: 13px; color: var(--muted); }
+
+/* map */
+.mapgrid { display: grid; grid-template-columns: minmax(0, 1fr) 330px; gap: 20px; align-items: start; }
+@media (max-width: 1080px) { .mapgrid { grid-template-columns: 1fr; } }
+.mapbox { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; overflow-x: auto; }
+.mapbox svg { display: block; width: 100%; min-width: 820px; height: auto; }
+.panel > * { min-width: 0; }
+.panel { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 20px; display: grid; gap: 14px; position: sticky; top: calc(env(safe-area-inset-top, 0px) + 12px); }
+@media (max-width: 1080px) { .panel { position: static; } }
+
+/* svg styling */
+.edge { fill: none; stroke: var(--line); stroke-width: 1.6; transition: opacity .2s, stroke .2s; }
+.edge.on { stroke-width: 2.4; }
+.hublink { fill: none; stroke-width: 1.4; stroke-dasharray: 4 4; opacity: 0; transition: opacity .2s; }
+.hublink.on { opacity: .9; }
+.pnode { cursor: pointer; transition: opacity .2s; }
+.pnode rect.box { fill: var(--surface); stroke: var(--line); stroke-width: 1.2; }
+.pnode:hover rect.box, .pnode:focus-visible rect.box { stroke: var(--ink); }
+.pnode.sel rect.box { stroke-width: 2.4; }
+.pnode:focus { outline: none; }
+.pnode .pname { font: 600 15px var(--f-body); fill: var(--ink); }
+.pnode .psub { font: 400 12px var(--f-body); fill: var(--muted); }
+.chip-t { font: 600 9.5px var(--f-mono); letter-spacing: .06em; }
+.dim { opacity: .18; }
+.snode text { font: 600 13px var(--f-body); fill: #fff; }
+.root-t1 { font: 700 26px var(--f-display); fill: var(--paper); }
+.root-t2 { font: 500 9px var(--f-mono); fill: var(--paper); letter-spacing: .06em; }
+.hub { cursor: pointer; transition: opacity .2s; }
+.hub rect { fill: var(--faint); stroke: var(--line); }
+.hub text { font: 500 12.5px var(--f-body); fill: var(--ink); }
+.hub .cnt { font: 600 10.5px var(--f-mono); fill: var(--muted); }
+.hub.sel rect { stroke: var(--ink); stroke-width: 2; }
+.lbl { font: 600 10.5px var(--f-mono); fill: var(--muted); letter-spacing: .1em; }
+
+/* panel content */
+.legend { display: grid; gap: 10px; font-size: 13.5px; }
+.legend-row { display: flex; gap: 10px; align-items: center; }
+.sw { width: 14px; height: 14px; border-radius: 4px; flex: none; }
+.strip-demo { display: inline-flex; gap: 3px; }
+.strip-demo i { width: 16px; height: 6px; border-radius: 2px; display: block; }
+.pill { display: inline-block; font: 600 10.5px/1 var(--f-mono); letter-spacing: .06em; padding: 4px 7px; border-radius: 5px; border: 1px solid currentColor; }
+.kv { display: grid; gap: 12px; }
+.kv div { display: grid; gap: 3px; }
+.kv dt { font: 600 11px/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: .1em; color: var(--muted); }
+.kv dd { margin: 0; font-size: 14px; }
+.kv dd.warn { color: var(--warn); }
+.cov { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 6px; }
+.cov span { min-width: 0; overflow-wrap: anywhere; font: 500 10.5px/1.25 var(--f-body); color: var(--muted); padding-top: 8px; border-top: 5px solid var(--faint); }
+.cov span.l2 { color: var(--ink); }
+.close { justify-self: start; font: 500 13px var(--f-body); background: none; border: 1px solid var(--line); color: var(--ink); border-radius: 8px; padding: 6px 10px; cursor: pointer; }
+.ptitle { display: flex; gap: 10px; align-items: baseline; flex-wrap: wrap; }
+.ptitle h3 { font: 700 20px/1.2 var(--f-display); }
+
+/* layers */
+.layers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0; border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+.layer { padding: 20px; display: grid; gap: 8px; align-content: start; border-right: 1px solid var(--line); }
+.layer:last-child { border-right: 0; }
+.layer .tag { font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; }
+.layer p { color: var(--muted); font-size: 14px; }
+@media (max-width: 760px) { .layers { grid-template-columns: 1fr; } .layer { border-right: 0; border-bottom: 1px solid var(--line); } .layer:last-child { border-bottom: 0; } }
+section { display: grid; gap: 16px; }
+.section-head { display: grid; gap: 6px; }
+.section-head p { color: var(--muted); }
+
+/* table */
+.tablebox { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+table { border-collapse: collapse; width: 100%; min-width: 1180px; font-size: 13.5px; }
+th, td { text-align: left; vertical-align: top; padding: 12px 14px; border-bottom: 1px solid var(--faint); }
+thead th { font: 600 11px/1.2 var(--f-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); background: var(--surface); position: sticky; top: 0; }
+tbody tr:last-child td { border-bottom: 0; }
+td.prod { font-weight: 600; white-space: nowrap; }
+td.prod small { display: block; font-weight: 400; color: var(--muted); }
+td .mono { font-size: 12.5px; }
+tr.segrow td { background: var(--faint); font: 600 11px var(--f-mono); letter-spacing: .1em; text-transform: uppercase; padding-block: 8px; }
+
+/* fit */
+.fit { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; }
+@media (max-width: 1080px) { .fit { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+@media (max-width: 600px) { .fit { grid-template-columns: 1fr; } }
+.fitcard { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 18px; display: grid; gap: 10px; align-content: start; }
+.fitcard .stack { font-weight: 600; }
+.fitcard dl { margin: 0; display: grid; grid-template-columns: auto 1fr; gap: 4px 12px; font-size: 13.5px; }
+.fitcard dt { color: var(--muted); }
+.fitcard dd { margin: 0; }
+
+/* demo checklist */
+.demo { display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 12px; }
+.demo-item { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 14px 16px; display: grid; gap: 8px; }
+.demo-item label { display: flex; gap: 10px; align-items: flex-start; font-size: 14px; cursor: pointer; }
+.demo-item input { margin-top: 3px; accent-color: var(--accent); }
+.demo-item h3 { font-size: 15px; }
+
+.sources { font-size: 13px; color: var(--muted); display: grid; gap: 6px; }
+.sources ol { margin: 0; padding-left: 20px; display: grid; gap: 4px; }
+.note { font-size: 13px; color: var(--muted); border-left: 3px solid var(--line); padding-left: 12px; }
+@media (prefers-reduced-motion: reduce) { * { transition: none !important; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header>
+  <div class="eyebrow">LegalTech · кластер «Договорная работа / CLM»</div>
+  <h1>Карта CLM-решений</h1>
+  <p class="lede">Одиннадцать продуктов для работы с договорами: от конструктора шаблонов до подписи через ЭДО. Цветная полоска на каждом узле показывает, какие из шести этапов жизненного цикла договора закрывает продукт. Нажмите на продукт, чтобы увидеть цену, срок внедрения, интеграции и риски.</p>
+  <div class="meta">
+    <span><b>11</b> продуктов</span>
+    <span><b>4</b> класса решений</span>
+    <span><b>6</b> этапов жизненного цикла</span>
+    <span>Цены по открытым источникам, октябрь 2026</span>
+  </div>
+</header>
+
+<div class="stagebar">
+  <div class="eyebrow">Фильтр по этапу жизненного цикла договора</div>
+  <div class="stages" id="stages"></div>
+  <div class="hint" id="stagehint">Выберите этап, чтобы оставить на карте только продукты, которые его закрывают.</div>
+</div>
+
+<div class="mapgrid">
+  <div class="mapbox"><svg id="map" role="img" aria-label="Интеллект-карта CLM-решений"></svg></div>
+  <aside class="panel" id="panel" aria-live="polite"></aside>
+</div>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">Главный вывод карты</div>
+    <h2>В России CLM собирают из трёх слоёв</h2>
+    <p>Зарубежные Ironclad и Juro закрывают весь цикл в одном продукте, но в РФ они недоступны. Российский рынок устроен иначе: полный цикл получается из связки двух-трёх систем, которые соединяются через 1С и ЭДО.</p>
+  </div>
+  <div class="layers">
+    <div class="layer">
+      <span class="tag" style="color:var(--seg-a)">Слой 1 · Подготовка</span>
+      <h3>Конструктор и ИИ-проверка</h3>
+      <p>Doczilla. Юрист один раз превращает шаблон в опросник, дальше бизнес сам собирает договор. ИИ подсвечивает риски в документах контрагента.</p>
+    </div>
+    <div class="layer">
+      <span class="tag" style="color:var(--seg-c)">Слой 2 · Процесс и учёт</span>
+      <h3>Маршрут, реестр, обязательства</h3>
+      <p>Directum RX, ELMA365, 1С:Документооборот или профильные Pravo.Tech и Юрайт. Здесь живут согласование, карточка договора, сроки и контроль исполнения.</p>
+    </div>
+    <div class="layer">
+      <span class="tag" style="color:var(--seg-d)">Слой 3 · Подписание</span>
+      <h3>ЭДО и КЭП</h3>
+      <p>Контур.Диадок или аналог. Подписанный договор возвращается в реестр, а контрагент получает его за минуты, а не через курьера.</p>
+    </div>
+  </div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">Сравнение</div>
+    <h2>Для кого, сколько стоит, как долго внедрять</h2>
+    <p>Цены вендоры почти не публикуют. Цифры ниже взяты с официальных страниц там, где они есть, и из агрегаторов и обзоров там, где их нет. Это ориентиры для бюджета, а не оферта.</p>
+  </div>
+  <div class="tablebox"><table id="cmp"></table></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">Рекомендации</div>
+    <h2>Какой стек выбрать</h2>
+  </div>
+  <div class="fit" id="fit"></div>
+</section>
+
+<section>
+  <div class="section-head">
+    <div class="eyebrow">Демо и пробные доступы</div>
+    <h2>Что проверить руками</h2>
+    <p>Сценарии для демо-звонка или пробного периода. Отметки сохраняются в этом браузере.</p>
+  </div>
+  <div class="demo" id="demo"></div>
+</section>
+
+<footer class="sources">
+  <div class="eyebrow">Источники</div>
+  <ol>
+    <li><a href="https://doczilla.pro/plans/" target="_blank" rel="noopener">Doczilla — корпоративные тарифы</a>; <a href="https://doczilla.pro/ru/cases/ikon/" target="_blank" rel="noopener">кейс Ikon Development (1С → ДДУ)</a>; <a href="https://productradar.ru/product/doczilla/" target="_blank" rel="noopener">Product Radar</a></li>
+    <li><a href="https://pravo.tech/solution/288" target="_blank" rel="noopener">ПравоТех — автоматизация работы с договорами</a></li>
+    <li><a href="https://crmindex.ru/products/yurayt__upravlenie_dogovorami_i_obyazatelstvami" target="_blank" rel="noopener">Юрайт: управление договорами и обязательствами (crmindex)</a></li>
+    <li><a href="https://www.comnews.ru/content/221066/2022-07-05/2022-w27/gazprom-transgaz-saratov-vedet-dogovornuyu-rabotu-directum-rx" target="_blank" rel="noopener">Directum RX в «Газпром трансгаз Саратов»</a>; <a href="https://noventiq.com/news/softline-automates-document-management-for-gulliver-group" target="_blank" rel="noopener">кейс Gulliver Group</a></li>
+    <li><a href="https://store.elma365.ru/component/contractmanagement-119" target="_blank" rel="noopener">ELMA365 Store — «Управление договорами»</a>; <a href="https://elma365.com/ru/prices/" target="_blank" rel="noopener">цены ELMA365</a></li>
+    <li><a href="https://infostart.ru/journal/news/mir-1s/obzor-tsen-na-otdelnye-produkty-i-servisy-1s-v-2026-godu_2646932/" target="_blank" rel="noopener">Инфостарт — цены 1С в 2026 году</a></li>
+    <li><a href="https://kontur.ru/diadoc/price" target="_blank" rel="noopener">Контур.Диадок — тарифы</a>; <a href="https://kontur.ru/diadoc/features/soglasovanie" target="_blank" rel="noopener">согласование в Диадоке</a></li>
+    <li><a href="https://bindlegal.com/resources/comparisons/ironclad-pricing-2026/" target="_blank" rel="noopener">Ironclad pricing 2026</a>; <a href="https://www.spotdraft.com/blog/juro-pricing-guide" target="_blank" rel="noopener">Juro pricing</a>; <a href="https://www.hyperstart.com/blog/docusign-clm-pricing/" target="_blank" rel="noopener">DocuSign CLM pricing</a>; <a href="https://bindlegal.com/resources/comparisons/spellbook-pricing-2026/" target="_blank" rel="noopener">Spellbook pricing 2026</a></li>
+  </ol>
+  <p class="note">Сроки внедрения, помеченные «оценка», выведены из масштаба продукта и опубликованных кейсов. Перед закупкой их нужно подтвердить коммерческим предложением.</p>
+</footer>
+
+</div>
+
+<script>
+const STAGES = [
+  { id: 0, short: "Инициация", full: "Инициация: заявка бизнеса на договор" },
+  { id: 1, short: "Составление", full: "Составление: шаблоны, конструктор, ИИ" },
+  { id: 2, short: "Согласование", full: "Согласование: маршруты, замечания, версии" },
+  { id: 3, short: "Подписание", full: "Подписание: ЭП, ЭДО, обмен с контрагентом" },
+  { id: 4, short: "Исполнение", full: "Исполнение: сроки, обязательства, продление" },
+  { id: 5, short: "Реестр и аналитика", full: "Реестр, поиск, отчёты, архив" }
+];
+
+const SEGMENTS = [
+  { id: "a", name: "Конструкторы и ИИ", color: "--seg-a", side: "L" },
+  { id: "b", name: "CLM-платформы", color: "--seg-b", side: "L" },
+  { id: "c", name: "СЭД и low-code", color: "--seg-c", side: "R" },
+  { id: "d", name: "ЭДО и подписание", color: "--seg-d", side: "R" }
+];
+
+const HUBS = [
+  { id: "1c", name: "1С" },
+  { id: "edo", name: "ЭДО-операторы" },
+  { id: "sps", name: "Консультант / Гарант" },
+  { id: "word", name: "MS Word / Office" },
+  { id: "crm", name: "Salesforce / HubSpot" },
+  { id: "msg", name: "Slack / мессенджеры" }
+];
+
+// cov: 0 — не закрывает, 1 — частично, 2 — полностью; по порядку STAGES
+const PRODUCTS = [
+  { id: "doczilla", name: "Doczilla", sub: "конструктор + ИИ-проверка", seg: "a", mk: "RU",
+    cov: [1,2,2,0,0,1], hubs: ["1c","sps"],
+    who: "Юрдепартаменты среднего и крупного бизнеса с потоком типовых договоров: девелопмент (ДДУ), финансы, госсектор. Для юристов-одиночек и малого бизнеса есть персональные тарифы.",
+    price: "Персональные тарифы от ~1,7 тыс. ₽/мес; Cloud Basic ~54 тыс. ₽/год; Cloud AI от 210 тыс. ₽/год (от 3 пользователей); серверная лицензия для госсектора — миллионы ₽.",
+    time: "Облако — 1–2 недели до первых документов; перевод 10–20 шаблонов в опросники — 1–2 месяца (оценка).",
+    integ: "API на корпоративных тарифах; 1С (печать ДДУ из карточки 1С в кейсе Ikon); КонсультантПлюс и Гарант для ссылок на нормы в ответах ИИ. В реестре отечественного ПО.",
+    effect: "Бизнес собирает типовой договор без юриста; по кейсу вендора подготовка ДДУ ускорилась в 5 раз. Меньше ошибок за счёт логики опросника.",
+    risk: "Главная работа — превратить шаблоны в опросники, это время юриста. Нет полноценного контроля исполнения. Выводы ИИ-проверки нужно перепроверять.",
+    demo: ["Собрать договор поставки через опросник", "Загрузить договор контрагента на ИИ-проверку рисков", "Настроить согласование с двумя участниками"] },
+
+  { id: "spellbook", name: "Spellbook", sub: "ИИ-ассистент в MS Word", seg: "a", mk: "GL",
+    cov: [0,2,1,0,0,0], hubs: ["word"],
+    who: "Юрфирмы и in-house юристы в англоязычных юрисдикциях, которые редактируют договоры в Word. Российским компаниям фактически недоступен.",
+    price: "Публичного прайса нет; по обзорам ~$150–500 за место в месяц, минимальный срок 6 месяцев.",
+    time: "Дни: устанавливается как надстройка Word.",
+    integ: "MS Word (add-in); собственные playbook и библиотеки прецедентов.",
+    effect: "Быстрее первичное ревью: находит отсутствующие условия, предлагает правки в режиме исправлений.",
+    risk: "Не оплатить из РФ; данные обрабатываются в облаке за рубежом (152-ФЗ); обучен на common law, качество на русском праве не гарантировано.",
+    demo: ["Отдать на ревью NDA на английском", "Сравнить предложенные правки с playbook компании"] },
+
+  { id: "pravotech", name: "Pravo.Tech", sub: "Legal Ops: договоры + суды", seg: "b", mk: "RU",
+    cov: [2,2,2,1,2,2], hubs: ["1c","edo"],
+    who: "Холдинги и крупные компании с юрдепартаментом 10+ юристов, которым нужна единая платформа для договоров, судебной и корпоративной работы. Пример — центр управления договорами МТС.",
+    price: "По запросу, подписка или лицензия линейки Legal Desk. Ориентир: от сотен тысяч до нескольких миллионов ₽ в год в зависимости от модулей (оценка).",
+    time: "2–6 месяцев с настройкой процессов и интеграций (оценка).",
+    integ: "1С, СЭД и ЭДО заказчика; внутри экосистемы ПравоТех — Casebook и Caselook для судебной аналитики.",
+    effect: "Единое окно для заявок бизнеса, смарт-шаблоны с опросником, автосогласование и автопродление, дашборды по нагрузке юристов и срокам.",
+    risk: "Цена и длительность проекта; нужно перестроить процессы юрдепартамента и получить поддержку руководства.",
+    demo: ["Подать заявку на договор от лица бизнеса", "Посмотреть дашборд сроков и нагрузки", "Проверить автопродление договора"] },
+
+  { id: "youright", name: "Юрайт CLM", sub: "договоры и обязательства", seg: "b", mk: "RU",
+    cov: [2,1,2,2,2,2], hubs: ["1c"],
+    who: "Средний бизнес на 1С, которому нужен контроль исполнения обязательств без тяжёлой СЭД.",
+    price: "От ~199 тыс. ₽ в год по данным агрегатора; есть пробный период.",
+    time: "2–6 недель (оценка).",
+    integ: "1С, API, электронная подпись.",
+    effect: "Контроль этапов от разработки до исполнения обязательств; уведомления о статусах договоров.",
+    risk: "Небольшой вендор и мало публичных отзывов: проверить SLA и поддержку. Пользователи отмечают время на обучение.",
+    demo: ["Завести договор и график обязательств", "Проверить уведомление о просроченном платеже"] },
+
+  { id: "ironclad", name: "Ironclad", sub: "эталон полного CLM", seg: "b", mk: "GL",
+    cov: [2,2,2,2,2,2], hubs: ["crm","word","msg"],
+    who: "Технологические компании США и ЕС от ~500 сотрудников с большим потоком sales- и procurement-договоров.",
+    price: "Лицензия ~$30–150 тыс. в год (медиана ~$40 тыс.); внедрение $10–75 тыс.; ИИ-модули отдельно; рост цены при продлении 5–8%.",
+    time: "От 2 месяцев, крупные проекты 3–6 месяцев.",
+    integ: "Salesforce, DocuSign, Slack, Workday, Coupa, MS Word и Google Docs.",
+    effect: "Self-service договоров для продаж, короче цикл сделки, ИИ извлекает данные из архива договоров.",
+    risk: "Недоступен в РФ; высокая стоимость владения; зависимость от англоязычной экосистемы.",
+    demo: ["Посмотреть публичное демо workflow для NDA", "Изучить ИИ-извлечение полей из архива"] },
+
+  { id: "juro", name: "Juro", sub: "CLM в браузере", seg: "b", mk: "GL",
+    cov: [2,2,2,2,1,2], hubs: ["crm","msg"],
+    who: "Быстрорастущие компании Великобритании и ЕС, где договорами занимаются продажи и HR, а не только юристы.",
+    price: "Без оплаты за пользователей, цена зависит от объёма договоров; типичные сделки $18–35 тыс. в год.",
+    time: "2–6 недель.",
+    integ: "Salesforce, HubSpot, Slack, Google Drive; встроенная электронная подпись.",
+    effect: "Договор от шаблона до подписи в одном браузерном редакторе без Word.",
+    risk: "Недоступен в РФ; данные хранятся в UK/EU; простая подпись не равна КЭП по 63-ФЗ.",
+    demo: ["Создать шаблон трудового договора с полями из HR-формы"] },
+
+  { id: "directum", name: "Directum RX", sub: "ECM с модулем договоров", seg: "c", mk: "RU",
+    cov: [2,1,2,2,1,2], hubs: ["1c","edo"],
+    who: "Крупный и средний бизнес и госкомпании, где уже есть или нужна единая СЭД. Пример: «Газпром трансгаз Саратов», 2000 пользователей.",
+    price: "По запросу; лицензии плюс внедрение партнёром. Проекты такого масштаба обычно стоят от нескольких миллионов ₽ (оценка).",
+    time: "3–9 месяцев, поэтапно: сначала делопроизводство, затем договоры.",
+    integ: "1С, Active Directory, ЭДО-операторы (Диадок, Saby); ИИ-модуль Directum Ario для распознавания документов.",
+    effect: "Единые маршруты и реестр с карточками. Кейс Gulliver Group: 43 типа договоров, 52 правила согласования, 885 сотрудников в системе.",
+    risk: "Тяжёлый проект с командой с обеих сторон (в кейсе Biocodex по 3 человека); юристам не хватает удобного конструктора текста.",
+    demo: ["Пройти маршрут согласования договора с замечаниями", "Найти договор в реестре по контрагенту и сумме"] },
+
+  { id: "elma", name: "ELMA365", sub: "low-code + готовое решение", seg: "c", mk: "RU",
+    cov: [2,1,2,1,1,2], hubs: ["1c","edo"],
+    who: "Компании, которые строят процессы на low-code и готовы настроить договорный процесс силами своего ИТ.",
+    price: "Решение «Управление договорами» в ELMA365 Store бесплатное; платформа лицензируется отдельно (по прайсу ~10 тыс. ₽ за именную лицензию в год, нужно уточнять у партнёра).",
+    time: "1–3 месяца (оценка).",
+    integ: "1С, ЭДО, REST API; любые системы через low-code-коннекторы.",
+    effect: "Гибкий процесс под компанию; закупки и договоры в одной платформе.",
+    risk: "Нужен аналитик или ИТ-ресурс; юридические функции (конструктор, ИИ-проверка) слабее, чем у профильных решений.",
+    demo: ["Установить решение из ELMA365 Store в пробную среду", "Поменять маршрут согласования без кода"] },
+
+  { id: "onec", name: "1С:Документооборот", sub: "договоры внутри 1С", seg: "c", mk: "RU",
+    cov: [1,1,2,2,1,2], hubs: ["1c","edo"],
+    who: "Компании, у которых учёт уже ведётся в 1С и важна связка договора с оплатами и контрагентами.",
+    price: "Лицензия ПРОФ ~63 тыс. ₽, КОРП ~327 тыс. ₽ (цены 2026 года) плюс клиентские лицензии и работа внедренца.",
+    time: "1–4 месяца (оценка).",
+    integ: "Родная связка с 1С:ERP, УТ и Бухгалтерией; 1С-ЭДО, Диадок, Saby.",
+    effect: "Невысокий порог входа; данные о контрагентах и оплатах уже лежат в 1С.",
+    risk: "Юристы жалуются на интерфейс; конструктор шаблонов примитивный; почти любая доработка требует программиста 1С.",
+    demo: ["Согласовать договор и посмотреть связь с оплатами в 1С"] },
+
+  { id: "diadoc", name: "Контур.Диадок", sub: "ЭДО + маршруты согласования", seg: "d", mk: "RU",
+    cov: [0,0,2,2,0,1], hubs: ["1c","edo"],
+    who: "Любой бизнес, который обменивается договорами и закрывающими документами с контрагентами.",
+    price: "Входящие бесплатно. Исходящие пакетами на год: 1 490 ₽ за 100 документов … 169 300 ₽ за 20 000. Согласование и любое число пользователей входят в тариф.",
+    time: "От 1 дня; модуль для 1С.",
+    integ: "1С (21 день бесплатно для новых клиентов), роуминг с другими операторами, API.",
+    effect: "Подписание за минуты вместо дней курьерской доставки; маршруты согласования со сроками на каждом шаге.",
+    risk: "Контрагент тоже должен работать в ЭДО; договор здесь не составляют; нужно выстроить работу с МЧД.",
+    demo: ["Отправить договор контрагенту и подписать КЭП", "Настроить маршрут согласования из трёх шагов"] },
+
+  { id: "docusign", name: "DocuSign", sub: "eSignature + CLM", seg: "d", mk: "GL",
+    cov: [1,1,1,2,1,2], hubs: ["crm","word"],
+    who: "Международные компании вне РФ; модуль CLM для крупного бизнеса на Salesforce.",
+    price: "CLM — только по запросу: ~$10–50 тыс. в год для среднего бизнеса, $60–250 тыс.+ для крупного; профуслуги $200–350 в час.",
+    time: "Подпись — дни; CLM — 3–12 месяцев.",
+    integ: "Salesforce (сильнейшая связка), MS 365, Google Workspace, SAP.",
+    effect: "Стандарт де-факто для подписи на Западе; CLM поверх подписи для отдела продаж.",
+    risk: "Ушёл с рынка РФ в 2022 году; подпись не является КЭП по 63-ФЗ; дорогое внедрение CLM.",
+    demo: ["Отправить конверт на подпись в бесплатном trial"] }
+];
+
+const FIT = [
+  { who: "Малый бизнес, ИП", stack: "Doczilla (персональный тариф) + Контур.Диадок", price: "до ~100 тыс. ₽/год", time: "1–2 недели", why: "Готовые шаблоны и подпись без ИТ-проекта." },
+  { who: "Средний бизнес на 1С", stack: "1С:Документооборот или Юрайт CLM + Диадок", price: "~0,3–0,7 млн ₽ в первый год", time: "1–3 месяца", why: "Договор связан с оплатами в 1С, контроль обязательств." },
+  { who: "Крупный бизнес, холдинг", stack: "Directum RX или Pravo.Tech + Doczilla + ЭДО", price: "от нескольких млн ₽", time: "3–9 месяцев", why: "Единый реестр, десятки маршрутов, нагрузка юристов под контролем." },
+  { who: "Международная компания вне РФ", stack: "Ironclad или Juro + Spellbook + DocuSign", price: "$40–200 тыс. в год", time: "1–6 месяцев", why: "Полный цикл в одном продукте плюс ИИ в Word." }
+];
+
+const NS = "http://www.w3.org/2000/svg";
+const svg = document.getElementById("map");
+const panel = document.getElementById("panel");
+const cssVar = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const segOf = id => SEGMENTS.find(s => s.id === id);
+const el = (tag, attrs = {}, parent) => {
+  const e = document.createElementNS(NS, tag);
+  for (const k in attrs) e.setAttribute(k, attrs[k]);
+  if (parent) parent.appendChild(e);
+  return e;
+};
+
+let selected = null, stageFilter = null, hubSel = null;
+
+// ---------- layout ----------
+const W = 1060, PW = 228, PH = 62, STEP = 78, SEG_GAP = 34, TOP = 70;
+const X = { Lp: 24, Ls: 360, root: 530, Rs: 700, Rp: W - 24 - PW };
+const pos = {}, segPos = {};
+let sideH = {};
+["L", "R"].forEach(side => {
+  let y = TOP;
+  SEGMENTS.filter(s => s.side === side).forEach((s, i, arr) => {
+    const ps = PRODUCTS.filter(p => p.seg === s.id);
+    const y0 = y;
+    ps.forEach(p => { pos[p.id] = { x: side === "L" ? X.Lp : X.Rp, y, side }; y += STEP; });
+    segPos[s.id] = { x: side === "L" ? X.Ls : X.Rs, y: (y0 + y - STEP) / 2 + PH / 2, side };
+    if (i < arr.length - 1) y += SEG_GAP;
+  });
+  sideH[side] = y - STEP + PH;
+});
+const treeH = Math.max(sideH.L, sideH.R);
+// center the shorter side
+["L", "R"].forEach(side => {
+  const off = (treeH - sideH[side]) / 2;
+  PRODUCTS.filter(p => pos[p.id].side === side).forEach(p => pos[p.id].y += off);
+  SEGMENTS.filter(s => s.side === side).forEach(s => segPos[s.id].y += off);
+});
+const rootY = (TOP + treeH) / 2;
+const HUB_Y = treeH + 90, HUB_W = 156, HUB_H = 38;
+const H = HUB_Y + HUB_H + 30;
+const hubPos = {};
+HUBS.forEach((h, i) => {
+  const gap = (W - 48 - HUBS.length * HUB_W) / (HUBS.length - 1);
+  hubPos[h.id] = { x: 24 + i * (HUB_W + gap), y: HUB_Y };
+});
+svg.setAttribute("viewBox", `0 0 ${W} ${H}`);
+
+const curve = (x1, y1, x2, y2) => {
+  const mx = (x1 + x2) / 2;
+  return `M${x1},${y1} C${mx},${y1} ${mx},${y2} ${x2},${y2}`;
+};
+
+function draw() {
+  svg.innerHTML = "";
+  // labels
+  el("text", { x: X.Lp, y: 34, class: "lbl" }, svg).textContent = "ПРОДУКТЫ · ПОКРЫТИЕ 6 ЭТАПОВ";
+  el("text", { x: X.Rp + PW, y: 34, class: "lbl", "text-anchor": "end" }, svg).textContent = "ПРОДУКТЫ · ПОКРЫТИЕ 6 ЭТАПОВ";
+  el("text", { x: 24, y: HUB_Y - 18, class: "lbl" }, svg).textContent = "ЭКОСИСТЕМА ИНТЕГРАЦИЙ";
+  el("line", { x1: 24, x2: W - 24, y1: HUB_Y - 40, y2: HUB_Y - 40, stroke: cssVar("--faint"), "stroke-width": 1 }, svg);
+
+  const gEdges = el("g", {}, svg), gHub = el("g", {}, svg), gNodes = el("g", {}, svg);
+
+  // root → segments
+  SEGMENTS.forEach(s => {
+    const sp = segPos[s.id], sx = sp.side === "L" ? sp.x + 80 : sp.x - 80;
+    const rx = sp.side === "L" ? X.root - 60 : X.root + 60;
+    const e = el("path", { d: curve(rx, rootY, sx, sp.y), class: "edge", "data-seg": s.id }, gEdges);
+    e.style.stroke = cssVar(s.color);
+    e.style.strokeWidth = 3;
+  });
+  // segment → products
+  PRODUCTS.forEach(p => {
+    const s = segOf(p.seg), sp = segPos[s.id], pp = pos[p.id];
+    const x1 = sp.side === "L" ? sp.x - 80 : sp.x + 80;
+    const x2 = pp.side === "L" ? pp.x + PW : pp.x;
+    el("path", { d: curve(x1, sp.y, x2, pp.y + PH / 2), class: "edge", "data-p": p.id, "data-seg": s.id }, gEdges);
+  });
+  // product → hubs (shown on selection)
+  PRODUCTS.forEach(p => p.hubs.forEach(h => {
+    const pp = pos[p.id], hp = hubPos[h];
+    const x1 = pp.x + PW / 2, y1 = pp.y + PH, x2 = hp.x + HUB_W / 2, y2 = hp.y;
+    const my = (y1 + y2) / 2;
+    const l = el("path", { d: `M${x1},${y1} C${x1},${my} ${x2},${my} ${x2},${y2}`, class: "hublink", "data-p": p.id, "data-h": h }, gHub);
+    l.style.stroke = cssVar(segOf(p.seg).color);
+  }));
+
+  // root
+  const rg = el("g", {}, gNodes);
+  el("rect", { x: X.root - 60, y: rootY - 46, width: 120, height: 92, rx: 46, fill: cssVar("--ink") }, rg);
+  el("text", { x: X.root, y: rootY + 4, "text-anchor": "middle", class: "root-t1" }, rg).textContent = "CLM";
+  el("text", { x: X.root, y: rootY + 24, "text-anchor": "middle", class: "root-t2" }, rg).textContent = "ДОГОВОРНАЯ РАБОТА";
+
+  // segments
+  SEGMENTS.forEach(s => {
+    const sp = segPos[s.id];
+    const g = el("g", { class: "snode", "data-seg": s.id }, gNodes);
+    el("rect", { x: sp.x - 80, y: sp.y - 17, width: 160, height: 34, rx: 17, fill: cssVar(s.color) }, g);
+    const t = el("text", { x: sp.x, y: sp.y + 4.5, "text-anchor": "middle" }, g);
+    t.textContent = s.name;
+    t.style.fill = cssVar("--surface");
+  });
+
+  // products
+  PRODUCTS.forEach(p => {
+    const pp = pos[p.id], c = cssVar(segOf(p.seg).color);
+    const g = el("g", { class: "pnode", "data-p": p.id, tabindex: 0, role: "button", "aria-label": `${p.name}: ${p.sub}` }, gNodes);
+    el("rect", { class: "box", x: pp.x, y: pp.y, width: PW, height: PH, rx: 10 }, g).style.stroke = selected === p.id ? c : "";
+    el("text", { class: "pname", x: pp.x + 12, y: pp.y + 21 }, g).textContent = p.name;
+    el("text", { class: "psub", x: pp.x + 12, y: pp.y + 36 }, g).textContent = p.sub;
+    // market chip
+    const chipW = p.mk === "RU" ? 26 : 50;
+    const chipColor = p.mk === "RU" ? cssVar("--ink") : cssVar("--muted");
+    el("rect", { x: pp.x + PW - chipW - 10, y: pp.y + 9, width: chipW, height: 16, rx: 4, fill: "none", stroke: chipColor }, g);
+    const ct = el("text", { class: "chip-t", x: pp.x + PW - chipW / 2 - 10, y: pp.y + 20.5, "text-anchor": "middle" }, g);
+    ct.textContent = p.mk === "RU" ? "RU" : "GLOBAL";
+    ct.style.fill = chipColor;
+    // coverage strip
+    const sw = (PW - 24 - 5 * 3) / 6;
+    p.cov.forEach((v, i) => {
+      const r = el("rect", { x: pp.x + 12 + i * (sw + 3), y: pp.y + 46, width: sw, height: 6, rx: 2 }, g);
+      r.style.fill = v ? c : cssVar("--faint");
+      r.style.opacity = v === 1 ? 0.38 : 1;
+      if (stageFilter === i) { r.setAttribute("height", 8); r.setAttribute("y", pp.y + 45); }
+      const tt = el("title", {}, r); tt.textContent = `${STAGES[i].short}: ${["нет", "частично", "полностью"][v]}`;
+    });
+    g.addEventListener("click", () => select(p.id));
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); select(p.id); } });
+  });
+
+  // hubs
+  HUBS.forEach(h => {
+    const hp = hubPos[h.id];
+    const n = PRODUCTS.filter(p => p.hubs.includes(h.id)).length;
+    const g = el("g", { class: "hub" + (hubSel === h.id ? " sel" : ""), "data-h": h.id, tabindex: 0, role: "button", "aria-label": `${h.name}: ${n} продуктов` }, gNodes);
+    el("rect", { x: hp.x, y: hp.y, width: HUB_W, height: HUB_H, rx: 8 }, g);
+    el("text", { x: hp.x + 12, y: hp.y + 23.5 }, g).textContent = h.name.length > 20 ? h.name.slice(0, 19) + "…" : h.name;
+    el("text", { x: hp.x + HUB_W - 10, y: hp.y + 23.5, "text-anchor": "end", class: "cnt" }, g).textContent = n;
+    el("title", {}, g).textContent = h.name;
+    g.addEventListener("click", () => selectHub(h.id));
+    g.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); selectHub(h.id); } });
+  });
+  applyState();
+}
+
+function applyState() {
+  const activeP = new Set(PRODUCTS.filter(p => {
+    if (selected) return p.id === selected;
+    if (hubSel) return p.hubs.includes(hubSel);
+    if (stageFilter !== null) return p.cov[stageFilter] > 0;
+    return true;
+  }).map(p => p.id));
+  const anyFilter = selected || hubSel || stageFilter !== null;
+  const activeSeg = new Set(PRODUCTS.filter(p => activeP.has(p.id)).map(p => p.seg));
+
+  svg.querySelectorAll(".pnode").forEach(n => {
+    n.classList.toggle("dim", !activeP.has(n.dataset.p));
+    n.classList.toggle("sel", n.dataset.p === selected);
+    if (n.dataset.p === selected) n.querySelector("rect.box").style.stroke = cssVar(segOf(PRODUCTS.find(p => p.id === selected).seg).color);
+  });
+  svg.querySelectorAll(".edge").forEach(e => {
+    const on = e.dataset.p ? activeP.has(e.dataset.p) : activeSeg.has(e.dataset.seg);
+    e.classList.toggle("dim", anyFilter && !on);
+    if (e.dataset.p) {
+      e.classList.toggle("on", anyFilter && on);
+      e.style.stroke = anyFilter && on ? cssVar(segOf(e.dataset.seg).color) : "";
+    }
+  });
+  svg.querySelectorAll(".snode").forEach(n => n.classList.toggle("dim", anyFilter && !activeSeg.has(n.dataset.seg)));
+  svg.querySelectorAll(".hublink").forEach(l => {
+    l.classList.toggle("on", (selected && l.dataset.p === selected) || (hubSel && l.dataset.h === hubSel));
+  });
+  const activeHubs = new Set(PRODUCTS.filter(p => activeP.has(p.id)).flatMap(p => p.hubs));
+  svg.querySelectorAll(".hub").forEach(h => h.classList.toggle("dim", (selected || hubSel) && !activeHubs.has(h.dataset.h)));
+}
+
+// ---------- panel ----------
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+
+function renderPanel() {
+  if (selected) {
+    const p = PRODUCTS.find(x => x.id === selected), s = segOf(p.seg);
+    panel.innerHTML = `
+      <div class="eyebrow" style="color:var(${s.color})">${esc(s.name)}</div>
+      <div class="ptitle"><h3>${esc(p.name)}</h3><span class="pill" style="color:var(--muted)">${p.mk === "RU" ? "RU" : "GLOBAL"}</span></div>
+      <div class="cov">${p.cov.map((v, i) => `<span class="l${v}" style="border-top-color:${v ? `var(${s.color})` : "var(--faint)"};${v === 1 ? "border-top-style:dashed" : ""}">${STAGES[i].short}</span>`).join("")}</div>
+      <dl class="kv">
+        <div><dt>Для кого</dt><dd>${esc(p.who)}</dd></div>
+        <div><dt>Эффект</dt><dd>${esc(p.effect)}</dd></div>
+        <div><dt>Цена</dt><dd>${esc(p.price)}</dd></div>
+        <div><dt>Срок внедрения</dt><dd>${esc(p.time)}</dd></div>
+        <div><dt>Интеграции</dt><dd>${esc(p.integ)}</dd></div>
+        <div><dt>Проблемы внедрения</dt><dd class="warn">${esc(p.risk)}</dd></div>
+      </dl>
+      <button class="close" id="closeSel" type="button">Показать все продукты</button>`;
+    document.getElementById("closeSel").onclick = () => select(null);
+    return;
+  }
+  if (hubSel) {
+    const h = HUBS.find(x => x.id === hubSel);
+    const ps = PRODUCTS.filter(p => p.hubs.includes(hubSel));
+    panel.innerHTML = `
+      <div class="eyebrow">Интеграция</div>
+      <h3 style="font:700 20px/1.2 var(--f-display)">${esc(h.name)}</h3>
+      <p style="font-size:14px;color:var(--muted)">Продукты, у которых есть связка с этой системой:</p>
+      <dl class="kv">${ps.map(p => `<div><dt style="color:var(${segOf(p.seg).color})">${esc(p.name)}</dt><dd>${esc(p.integ)}</dd></div>`).join("")}</dl>
+      <button class="close" id="closeSel" type="button">Показать все продукты</button>`;
+    document.getElementById("closeSel").onclick = () => selectHub(null);
+    return;
+  }
+  panel.innerHTML = `
+    <div class="eyebrow">Как читать карту</div>
+    <div class="legend">
+      ${SEGMENTS.map(s => `<div class="legend-row"><span class="sw" style="background:var(${s.color})"></span>${esc(s.name)} · ${PRODUCTS.filter(p => p.seg === s.id).length}</div>`).join("")}
+    </div>
+    <div class="legend">
+      <div class="legend-row"><span class="strip-demo"><i style="background:var(--seg-b)"></i><i style="background:var(--seg-b);opacity:.38"></i><i style="background:var(--faint)"></i></span>этап закрыт полностью / частично / не закрыт</div>
+      <div class="legend-row"><span class="pill">RU</span>доступен в России</div>
+      <div class="legend-row"><span class="pill" style="color:var(--muted)">GLOBAL</span>зарубежный ориентир, в РФ недоступен</div>
+      <div class="legend-row" style="color:var(--muted)">Пунктир к нижнему ряду — интеграции. Появляется при выборе продукта или системы.</div>
+    </div>
+    <div class="eyebrow" style="margin-top:6px">Что видно сразу</div>
+    <dl class="kv">
+      <div><dt>Полный цикл</dt><dd>Все шесть этапов целиком закрывает только Ironclad, и он недоступен в РФ. Из российских ближе всех Pravo.Tech и Юрайт CLM.</dd></div>
+      <div><dt>Разрыв</dt><dd>Составление (конструктор, ИИ) и подписание (ЭДО) закрывают разные продукты. Связывают их 1С и ЭДО-операторы.</dd></div>
+      <div><dt>Главный узел</dt><dd>1С — самая частая точка интеграции: ${PRODUCTS.filter(p => p.hubs.includes("1c")).length} из ${PRODUCTS.length} продуктов.</dd></div>
+    </dl>`;
+}
+
+function select(id) {
+  selected = selected === id ? null : id;
+  hubSel = null;
+  draw(); renderPanel();
+}
+function selectHub(id) {
+  hubSel = hubSel === id ? null : id;
+  selected = null;
+  draw(); renderPanel();
+}
+document.addEventListener("keydown", e => { if (e.key === "Escape" && (selected || hubSel)) { selected = null; hubSel = null; draw(); renderPanel(); } });
+
+// ---------- stage filter ----------
+const stagesBox = document.getElementById("stages");
+const hint = document.getElementById("stagehint");
+function renderStages() {
+  stagesBox.innerHTML = STAGES.map((s, i) =>
+    `${i ? '<span class="arrow" aria-hidden="true">→</span>' : ""}<button class="stage-btn" type="button" id="stage-${i}" data-i="${i}" aria-pressed="${stageFilter === i}" title="${esc(s.full)}"><span class="n">${i + 1}</span>${esc(s.short)}</button>`).join("");
+  stagesBox.querySelectorAll(".stage-btn").forEach(b => b.onclick = () => {
+    const i = +b.dataset.i;
+    stageFilter = stageFilter === i ? null : i;
+    selected = null; hubSel = null;
+    renderStages(); draw(); renderPanel();
+  });
+  if (stageFilter === null) hint.textContent = "Выберите этап, чтобы оставить на карте только продукты, которые его закрывают.";
+  else {
+    const full = PRODUCTS.filter(p => p.cov[stageFilter] === 2).map(p => p.name);
+    hint.textContent = `${STAGES[stageFilter].full}. Полностью закрывают: ${full.join(", ")}.`;
+  }
+}
+
+// ---------- table ----------
+function renderTable() {
+  const t = document.getElementById("cmp");
+  let h = `<thead><tr><th>Продукт</th><th>Для каких компаний</th><th>Эффект</th><th>Цена</th><th>Срок внедрения</th><th>Интеграции</th><th>Проблемы внедрения</th></tr></thead><tbody>`;
+  SEGMENTS.forEach(s => {
+    h += `<tr class="segrow"><td colspan="7" style="color:var(${s.color})">${esc(s.name)}</td></tr>`;
+    PRODUCTS.filter(p => p.seg === s.id).forEach(p => {
+      h += `<tr><td class="prod">${esc(p.name)}<small>${p.mk === "RU" ? "Россия" : "зарубежный"}</small></td><td>${esc(p.who)}</td><td>${esc(p.effect)}</td><td>${esc(p.price)}</td><td>${esc(p.time)}</td><td>${esc(p.integ)}</td><td>${esc(p.risk)}</td></tr>`;
+    });
+  });
+  t.innerHTML = h + "</tbody>";
+}
+
+function renderFit() {
+  document.getElementById("fit").innerHTML = FIT.map(f => `
+    <div class="fitcard">
+      <div class="eyebrow">${esc(f.who)}</div>
+      <div class="stack">${esc(f.stack)}</div>
+      <dl><dt>Бюджет</dt><dd class="mono">${esc(f.price)}</dd><dt>Срок</dt><dd class="mono">${esc(f.time)}</dd><dt>Зачем</dt><dd>${esc(f.why)}</dd></dl>
+    </div>`).join("");
+}
+
+function renderDemo() {
+  let done = {};
+  try { done = JSON.parse(localStorage.getItem("clm-demo") || "{}"); } catch (e) {}
+  document.getElementById("demo").innerHTML = PRODUCTS.map(p => `
+    <div class="demo-item">
+      <h3 style="color:var(${segOf(p.seg).color})">${esc(p.name)}</h3>
+      ${p.demo.map((d, i) => { const id = `demo-${p.id}-${i}`; return `<label for="${id}"><input type="checkbox" id="${id}" ${done[id] ? "checked" : ""}>${esc(d)}</label>`; }).join("")}
+    </div>`).join("");
+  document.querySelectorAll("#demo input").forEach(c => c.addEventListener("change", () => {
+    done[c.id] = c.checked;
+    try { localStorage.setItem("clm-demo", JSON.stringify(done)); } catch (e) {}
+  }));
+}
+
+renderStages(); draw(); renderPanel(); renderTable(); renderFit(); renderDemo();
+// перерисовать при смене темы, т.к. цвета SVG берутся из токенов
+window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", draw);
+new MutationObserver(draw).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+</script>
+</body>
+</html>
