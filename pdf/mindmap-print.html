@@ -1,0 +1,302 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<title>Карта CLM-решений</title>
+<link rel="stylesheet" href="fonts/fonts.css">
+<style>
+/* Одна страница A3 альбом: шапка с легендой → корень CLM и 6 этапов → 4 колонки-ветки с карточками продуктов → выводы в свободных местах колонок */
+:root {
+  --paper: #FFFFFF;
+  --ink: #161D2E;
+  --muted: #5A6379;
+  --line: #CBD2DE;
+  --faint: #E7EBF2;
+  --tint: #F4F6FA;
+  --seg-a: #7A3DB5;
+  --seg-b: #2743C4;
+  --seg-c: #0D7A73;
+  --seg-d: #A85C0C;
+  --warn: #B3261E;
+  --f-display: "Unbounded", "Golos Text", sans-serif;
+  --f-body: "Golos Text", "Inter", sans-serif;
+  --f-mono: "JetBrains Mono", "DejaVu Sans Mono", monospace;
+}
+@page { size: 420mm 297mm; margin: 0; }
+* { box-sizing: border-box; }
+html, body { margin: 0; background: var(--paper); color: var(--ink); -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+body { font: 11px/1.3 var(--f-body); }
+.page { position: relative; width: 1587px; height: 1122px; overflow: hidden; }
+
+header { position: absolute; left: 36px; right: 36px; top: 26px; display: flex; justify-content: space-between; align-items: flex-end; gap: 30px; }
+.eyebrow { font: 600 10px/1 var(--f-mono); letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+h1 { margin: 8px 0 6px; font: 700 30px/1.05 var(--f-display); letter-spacing: -0.01em; }
+.sub { color: var(--muted); font-size: 12.5px; max-width: 760px; }
+.legend { display: grid; grid-template-columns: auto auto; gap: 6px 22px; font-size: 11px; align-items: center; }
+.lg { display: flex; align-items: center; gap: 7px; white-space: nowrap; }
+.sw { width: 11px; height: 11px; border-radius: 3px; }
+.strip-demo { display: inline-flex; gap: 2px; }
+.strip-demo i { width: 14px; height: 5px; border-radius: 2px; display: block; }
+.chip { font: 600 8.5px/1 var(--f-mono); letter-spacing: .06em; border: 1px solid currentColor; border-radius: 4px; padding: 3px 5px; }
+
+svg#wires { position: absolute; left: 0; top: 0; width: 1587px; height: 1122px; }
+
+.card { position: absolute; width: 371px; background: var(--paper); border: 1px solid var(--line); border-radius: 9px; padding: 9px 12px 9px; }
+.card .top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.card .name { font: 700 14px/1.1 var(--f-body); }
+.card .name small { font: 400 11px var(--f-body); color: var(--muted); margin-left: 6px; }
+.card .chip.ru { color: var(--ink); }
+.card .chip.gl { color: var(--muted); }
+.strip { display: grid; grid-template-columns: repeat(6, 1fr); gap: 3px; margin: 7px 0 7px; }
+.strip i { height: 5px; border-radius: 2px; display: block; background: var(--faint); }
+.rows { display: grid; grid-template-columns: 66px 1fr; gap: 2.5px 8px; font-size: 10.8px; line-height: 1.28; }
+.rows dt { font: 600 8px/1.6 var(--f-mono); letter-spacing: .08em; text-transform: uppercase; color: var(--muted); }
+.rows dd { margin: 0; }
+.rows dd.money { font-weight: 600; }
+.rows dd.warn { color: var(--warn); }
+
+.seghead { position: absolute; width: 371px; height: 34px; border-radius: 8px; color: #fff; display: flex; align-items: center; justify-content: space-between; padding: 0 12px; font: 700 13px/1 var(--f-body); }
+.seghead span { font: 600 9px/1 var(--f-mono); letter-spacing: .08em; opacity: .85; }
+
+.rootrow { position: absolute; left: 36px; right: 36px; top: 128px; display: grid; grid-template-columns: 1fr 190px 1fr; gap: 28px; align-items: center; }
+.disc { justify-self: center; width: 190px; height: 84px; border-radius: 42px; background: var(--ink); color: #fff; display: grid; place-content: center; text-align: center; gap: 3px; }
+.disc b { font: 700 30px/1 var(--f-display); }
+.disc span { font: 500 8.5px/1.2 var(--f-mono); letter-spacing: .1em; }
+.facts { display: grid; gap: 4px; font-size: 11px; justify-self: end; max-width: 520px; }
+.facts p { margin: 0; }
+.facts b { font-weight: 700; }
+.stages { justify-self: start; display: grid; gap: 6px; }
+.stages .t { font: 600 8.5px/1.2 var(--f-mono); letter-spacing: .1em; text-transform: uppercase; color: var(--muted); }
+.chain { display: flex; flex-wrap: wrap; gap: 4px 6px; align-items: center; font-size: 11px; max-width: 560px; }
+.chain .st { display: inline-flex; align-items: center; gap: 5px; white-space: nowrap; }
+.chain .n { font: 600 9px/1 var(--f-mono); width: 16px; height: 16px; border-radius: 50%; border: 1px solid var(--ink); display: grid; place-items: center; }
+.chain .ar { color: var(--muted); }
+.box { position: absolute; width: 371px; border-radius: 10px; padding: 13px 15px; display: grid; gap: 7px; align-content: start; }
+.box.dark { background: var(--ink); color: #fff; }
+.box.dark .eyebrow { color: #B9C2D6; }
+.box.dark p { color: #D7DCE8; }
+.box.tint { background: var(--tint); border: 1px solid var(--faint); }
+.box h2 { margin: 0; font: 700 15px/1.25 var(--f-display); }
+.box p { margin: 0; font-size: 11px; color: var(--muted); }
+.layer { display: grid; gap: 1px; padding-top: 7px; border-top: 1px solid rgba(255,255,255,.18); }
+.layer b { font-size: 12px; color: #fff; }
+.layer span { font-size: 10.8px; color: #D7DCE8; }
+
+footer { position: absolute; left: 36px; right: 36px; bottom: 22px; }
+.pick { display: grid; grid-template-columns: auto 1fr; gap: 6px 12px; font-size: 11px; margin: 0; }
+.pick dt { font-weight: 700; white-space: nowrap; }
+.pick dd { margin: 0; }
+.pick dd i { font-style: normal; color: var(--muted); }
+.src { font-size: 8.6px; color: var(--muted); }
+</style>
+</head>
+<body>
+<div class="page" id="page">
+
+<header>
+  <div>
+    <div class="eyebrow">LegalTech · кластер «Договорная работа / CLM» · интеллект-карта</div>
+    <h1>Карта CLM-решений: от шаблона до подписи</h1>
+    <div class="sub">11 продуктов в 4 классах. Для каждого: кому подходит, эффект, цена и срок внедрения, интеграции, главный риск. Полоска показывает, какие из 6 этапов жизненного цикла договора закрывает продукт.</div>
+  </div>
+  <div class="legend">
+    <div class="lg"><span class="sw" style="background:var(--seg-a)"></span>Конструкторы и ИИ</div>
+    <div class="lg"><span class="strip-demo"><i style="background:var(--seg-b)"></i><i style="background:var(--seg-b);opacity:.35"></i><i style="background:var(--faint)"></i></span>этап: полностью / частично / нет</div>
+    <div class="lg"><span class="sw" style="background:var(--seg-b)"></span>CLM-платформы</div>
+    <div class="lg"><span class="chip">RU</span>доступен в России</div>
+    <div class="lg"><span class="sw" style="background:var(--seg-c)"></span>СЭД и low-code</div>
+    <div class="lg"><span class="chip" style="color:var(--muted)">GLOBAL</span>зарубежный ориентир</div>
+    <div class="lg"><span class="sw" style="background:var(--seg-d)"></span>ЭДО и подписание</div>
+    <div class="lg" style="color:var(--muted)">Цены: открытые источники, окт. 2026</div>
+  </div>
+</header>
+
+<svg id="wires" xmlns="http://www.w3.org/2000/svg"></svg>
+<div id="nodes"></div>
+
+<div class="rootrow">
+  <div class="facts">
+    <p><b>Кластер:</b> системы для договорной работы юрдепартамента и бизнеса.</p>
+    <p><b>Полный цикл</b> закрывает только Ironclad; из российских ближе всех Pravo.Tech и Юрайт CLM.</p>
+    <p><b>Разрыв:</b> составление и подписание закрывают разные продукты. <b>Узел интеграций:</b> 1С у 7 из 11, ЭДО у 6.</p>
+  </div>
+  <div class="disc" id="disc"><b>CLM</b><span>ДОГОВОРНАЯ РАБОТА</span></div>
+  <div class="stages">
+    <div class="t">Жизненный цикл договора = 6 делений полоски на карточке</div>
+    <div class="chain" id="chain"></div>
+  </div>
+</div>
+<footer><div class="src">Источники: doczilla.pro/plans, кейс Ikon Development; pravo.tech/solution/288; crmindex.ru (Юрайт); comnews.ru (Directum RX, «Газпром трансгаз Саратов»), noventiq.com (Gulliver Group); store.elma365.ru, elma365.com/ru/prices; infostart.ru (цены 1С 2026); kontur.ru/diadoc/price; bindlegal.com, spotdraft.com, hyperstart.com (Ironclad, Juro, DocuSign, Spellbook). Сроки с пометкой «≈» — оценка по масштабу продукта и кейсам, подтверждать у вендора.</div></footer>
+</div>
+
+<script>
+const SEGMENTS = [
+  { id: "a", name: "Конструкторы и ИИ", color: "--seg-a", side: "L" },
+  { id: "b", name: "CLM-платформы", color: "--seg-b", side: "L" },
+  { id: "c", name: "СЭД и low-code", color: "--seg-c", side: "R" },
+  { id: "d", name: "ЭДО и подписание", color: "--seg-d", side: "R" }
+];
+const STAGES = ["Инициация (заявка)", "Составление", "Согласование", "Подписание", "Исполнение", "Реестр и аналитика"];
+// cov: 0 нет, 1 частично, 2 полностью
+const P = [
+  { seg: "a", name: "Doczilla", sub: "конструктор + ИИ", mk: "RU", cov: [1,2,2,0,0,1],
+    who: "Юрдепартаменты с потоком типовых договоров, девелопмент, госсектор",
+    eff: "Бизнес собирает договор без юриста; ДДУ в 5 раз быстрее (кейс Ikon)",
+    money: "от 54 тыс. ₽/год (Cloud AI от 210 тыс.) · запуск 1–2 нед.",
+    integ: "1С, API, КонсультантПлюс и Гарант",
+    risk: "Перевод шаблонов в опросники занимает время юриста" },
+  { seg: "a", name: "Spellbook", sub: "ИИ в MS Word", mk: "GL", cov: [0,2,1,0,0,0],
+    who: "Юрфирмы и in-house в англоязычном праве",
+    eff: "Быстрое ревью, правки в режиме исправлений",
+    money: "$150–500 за место/мес, мин. 6 мес. · дни",
+    integ: "MS Word (надстройка)",
+    risk: "Недоступен в РФ, данные за рубежом (152-ФЗ)" },
+  { seg: "b", name: "Pravo.Tech", sub: "Legal Ops", mk: "RU", cov: [2,2,2,1,2,2],
+    who: "Холдинги, юрдепартамент 10+ юристов (кейс МТС)",
+    eff: "Единое окно заявок, автосогласование, контроль сроков",
+    money: "по запросу, от сотен тыс. ₽/год · ≈2–6 мес.",
+    integ: "1С, СЭД, ЭДО, Casebook",
+    risk: "Цена и перестройка процессов юрдепартамента" },
+  { seg: "b", name: "Юрайт CLM", sub: "договоры и обязательства", mk: "RU", cov: [2,1,2,2,2,2],
+    who: "Средний бизнес на 1С без тяжёлой СЭД",
+    eff: "Контроль исполнения обязательств, уведомления о статусах",
+    money: "от 199 тыс. ₽/год · ≈2–6 нед.",
+    integ: "1С, API, электронная подпись",
+    risk: "Небольшой вендор, мало отзывов: проверить SLA" },
+  { seg: "b", name: "Ironclad", sub: "эталон полного CLM", mk: "GL", cov: [2,2,2,2,2,2],
+    who: "Tech-компании США и ЕС от ~500 сотрудников",
+    eff: "Self-service договоров для продаж, ИИ-извлечение данных",
+    money: "$30–150 тыс./год + внедрение $10–75 тыс. · 2–6 мес.",
+    integ: "Salesforce, DocuSign, Slack, Workday",
+    risk: "Недоступен в РФ; рост цены при продлении 5–8%" },
+  { seg: "b", name: "Juro", sub: "CLM в браузере", mk: "GL", cov: [2,2,2,2,1,2],
+    who: "Scale-up в UK и ЕС, где договоры ведут продажи и HR",
+    eff: "От шаблона до подписи в одном редакторе без Word",
+    money: "$18–35 тыс./год, без оплаты за пользователей · 2–6 нед.",
+    integ: "Salesforce, HubSpot, Slack",
+    risk: "Недоступен в РФ; подпись не равна КЭП" },
+  { seg: "c", name: "Directum RX", sub: "ECM + договоры", mk: "RU", cov: [2,1,2,2,1,2],
+    who: "Крупный бизнес и госкомпании (Газпром трансгаз Саратов, 2000 польз.)",
+    eff: "Единые маршруты и реестр: 43 типа договоров, 52 правила (Gulliver)",
+    money: "по запросу, ≈от неск. млн ₽ · 3–9 мес. поэтапно",
+    integ: "1С, Active Directory, Диадок, Saby",
+    risk: "Тяжёлый проект, у юристов нет удобного конструктора" },
+  { seg: "c", name: "ELMA365", sub: "low-code", mk: "RU", cov: [2,1,2,1,1,2],
+    who: "Компании на low-code со своим ИТ-ресурсом",
+    eff: "Договорный процесс под себя без программирования",
+    money: "решение 0 ₽ + платформа ≈10 тыс. ₽/польз./год · ≈1–3 мес.",
+    integ: "1С, ЭДО, REST API",
+    risk: "Нужен аналитик; юр-функции слабее профильных" },
+  { seg: "c", name: "1С:Документооборот", sub: "", mk: "RU", cov: [1,1,2,2,1,2],
+    who: "Компании, где учёт уже ведётся в 1С",
+    eff: "Договор связан с контрагентами и оплатами в 1С",
+    money: "ПРОФ 63 тыс. ₽ / КОРП 327 тыс. ₽ + внедрение · ≈1–4 мес.",
+    integ: "1С:ERP, УТ, Бухгалтерия, 1С-ЭДО",
+    risk: "Неудобный интерфейс, доработки только программистом 1С" },
+  { seg: "d", name: "Контур.Диадок", sub: "ЭДО + согласование", mk: "RU", cov: [0,0,2,2,0,1],
+    who: "Любой бизнес, который обменивается договорами",
+    eff: "Подпись КЭП за минуты вместо курьера, маршруты со сроками",
+    money: "входящие 0 ₽; 1 490 ₽ за 100 исходящих · от 1 дня",
+    integ: "1С, роуминг с операторами, API",
+    risk: "Контрагент тоже должен быть в ЭДО; МЧД" },
+  { seg: "d", name: "DocuSign", sub: "eSignature + CLM", mk: "GL", cov: [1,1,1,2,1,2],
+    who: "Международные компании вне РФ",
+    eff: "Стандарт подписи на Западе, CLM для продаж",
+    money: "CLM $10–250 тыс./год · 3–12 мес.",
+    integ: "Salesforce, MS 365, SAP",
+    risk: "Ушёл из РФ в 2022; подпись не равна КЭП" }
+];
+
+function build() {
+const nodes = document.getElementById("nodes"), wires = document.getElementById("wires");
+const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+const seg = id => SEGMENTS.find(s => s.id === id);
+const NS = "http://www.w3.org/2000/svg";
+const MARGIN = 36, COL_W = 371, COL_GAP = (1587 - 2 * MARGIN - 4 * COL_W) / 3;
+const HEAD_Y = 262, CARD_Y = HEAD_Y + 34 + 10, GAP = 9;
+const colX = i => MARGIN + i * (COL_W + COL_GAP);
+
+document.getElementById("chain").innerHTML = STAGES.map((s, i) =>
+  `${i ? '<span class="ar">→</span>' : ""}<span class="st"><span class="n">${i + 1}</span>${s}</span>`).join("");
+
+const colBottom = {};
+SEGMENTS.forEach((sg, ci) => {
+  const x = colX(ci), c = sg.color;
+  const h = document.createElement("div");
+  h.className = "seghead";
+  h.style.left = x + "px"; h.style.top = HEAD_Y + "px"; h.style.background = `var(${c})`;
+  const n = P.filter(p => p.seg === sg.id).length;
+  h.innerHTML = `${sg.name}<span>${n} ${n === 1 ? "ПРОДУКТ" : n < 5 ? "ПРОДУКТА" : "ПРОДУКТОВ"}</span>`;
+  nodes.appendChild(h);
+  let y = CARD_Y;
+  P.filter(p => p.seg === sg.id).forEach(p => {
+    const d = document.createElement("div");
+    d.className = "card";
+    d.innerHTML = `
+      <div class="top"><div class="name">${p.name}${p.sub ? `<small>${p.sub}</small>` : ""}</div><span class="chip ${p.mk === "RU" ? "ru" : "gl"}">${p.mk === "RU" ? "RU" : "GLOBAL"}</span></div>
+      <div class="strip">${p.cov.map(v => `<i style="${v ? `background:var(${c});` : ""}${v === 1 ? "opacity:.35" : ""}"></i>`).join("")}</div>
+      <dl class="rows">
+        <dt>Кому</dt><dd>${p.who}</dd>
+        <dt>Эффект</dt><dd>${p.eff}</dd>
+        <dt>Цена · срок</dt><dd class="money">${p.money}</dd>
+        <dt>Интеграции</dt><dd>${p.integ}</dd>
+        <dt>Проблемы</dt><dd class="warn">${p.risk}</dd>
+      </dl>`;
+    d.style.borderLeft = `4px solid var(${c})`;
+    d.style.left = x + "px"; d.style.top = y + "px";
+    nodes.appendChild(d);
+    // спина колонки: линия от шапки к карточке
+    const t = document.createElementNS(NS, "path");
+    t.setAttribute("d", `M${x + 14},${HEAD_Y + 34} V${y + 22} H${x}`);
+    t.setAttribute("fill", "none"); t.setAttribute("stroke", css(c)); t.setAttribute("stroke-width", "2");
+    wires.appendChild(t);
+    y += d.offsetHeight + GAP;
+  });
+  colBottom[ci] = y;
+});
+
+// ветви от корня к шапкам колонок
+const dr = document.getElementById("disc").getBoundingClientRect();
+const cx = dr.left + dr.width / 2, cy = dr.bottom;
+SEGMENTS.forEach((sg, ci) => {
+  const hx = colX(ci) + COL_W / 2, sx = cx + (ci - 1.5) * 34, sy = cy - 6, my = (sy + HEAD_Y) / 2;
+  const path = document.createElementNS(NS, "path");
+  path.setAttribute("d", `M${sx},${sy} C${sx},${my + 14} ${hx},${my - 14} ${hx},${HEAD_Y}`);
+  path.setAttribute("fill", "none"); path.setAttribute("stroke", css(sg.color)); path.setAttribute("stroke-width", "3");
+  wires.appendChild(path);
+});
+
+// выводы — в свободном месте коротких колонок
+const concl = document.createElement("div");
+concl.className = "box dark";
+concl.innerHTML = `
+  <div class="eyebrow">Вывод</div>
+  <h2>В России CLM собирают из трёх слоёв</h2>
+  <p>Весь цикл в одном продукте закрывает только Ironclad, а он недоступен в РФ. Слои связывают 1С и ЭДО.</p>
+  <div class="layer"><b>1 · Подготовка: конструктор и ИИ</b><span>Doczilla: юрист один раз собирает опросник, бизнес сам готовит договор.</span></div>
+  <div class="layer"><b>2 · Процесс и учёт: маршрут, реестр, обязательства</b><span>Directum RX, ELMA365, 1С:ДО или профильные Pravo.Tech и Юрайт CLM.</span></div>
+  <div class="layer"><b>3 · Подписание: ЭДО и КЭП</b><span>Контур.Диадок: подпись за минуты, документ возвращается в реестр.</span></div>`;
+concl.style.left = colX(0) + "px"; concl.style.top = (colBottom[0] + 14) + "px";
+nodes.appendChild(concl);
+
+const pick = document.createElement("div");
+pick.className = "box tint";
+pick.innerHTML = `
+  <div class="eyebrow">Что выбрать</div>
+  <dl class="pick">
+    <dt>Малый бизнес</dt><dd>Doczilla + Диадок<br><i>до ~100 тыс. ₽/год · 1–2 недели</i></dd>
+    <dt>Средний на 1С</dt><dd>1С:ДО или Юрайт CLM + Диадок<br><i>0,3–0,7 млн ₽ · 1–3 месяца</i></dd>
+    <dt>Холдинг</dt><dd>Directum RX или Pravo.Tech + Doczilla + ЭДО<br><i>от нескольких млн ₽ · 3–9 месяцев</i></dd>
+    <dt>Вне РФ</dt><dd>Ironclad или Juro + Spellbook + DocuSign<br><i>$40–200 тыс./год · 1–6 месяцев</i></dd>
+  </dl>`;
+pick.style.left = colX(3) + "px"; pick.style.top = (colBottom[3] + 14) + "px";
+nodes.appendChild(pick);
+
+const foot = document.querySelector("footer").getBoundingClientRect().top;
+window.__layout = { cols: colBottom, conclBottom: concl.getBoundingClientRect().bottom, pickBottom: pick.getBoundingClientRect().bottom, foot };
+window.__ready = true;
+}
+Promise.all(["400 11px 'Golos Text'","500 11px 'Golos Text'","600 11px 'Golos Text'","700 14px 'Golos Text'","500 8px 'JetBrains Mono'","600 8px 'JetBrains Mono'","700 30px Unbounded"].map(f => document.fonts.load(f, "Аа Bb"))).then(build, build);
+</script>
+</body>
+</html>
